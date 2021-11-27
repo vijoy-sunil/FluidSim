@@ -35,6 +35,8 @@
  * +------------------------------------------------------------------------+
 */
 class FluidClass{
+    private:
+        int totalCells;
     public:
         /* Fluid representaion based on a grid with
          * stationary regions (NxN regions), with 
@@ -86,7 +88,7 @@ class FluidClass{
          * time step dt (how big each step is), rates of
          * diffusion - density diffusion and viscous diffusion
         */
-        FluidClass(int _N, float _dt, float _dDiff, float _vDiff);
+        FluidClass(int _N, float _dDiff, float _vDiff, float _dt);
         /* destructor needs to free all dynamic memory allocated
         */
         ~FluidClass(void);
@@ -129,15 +131,15 @@ class FluidClass{
          * i.e dCurr(i,j) = dNext(i,j) - k * (sNext)
          * 
          * Rearranging this,
-         * dNext(i,j) = (dCurr(i,j) + k * sNext)/(1 + 4 * k)
+         * dNext(i,j) = (dCurr(i,j) + k * s)/(1 + 4 * k)
          * We have turned the linear relation between dNext
          * and k to a hyperbolic one. So instead of overshooting
          * with changes in k, we tend to converge towards the target
          * value. This is a stable way of interpolating.
          * 
-         * But, sNext is unknown in this equation.
-         * sNext = (dNext(i+1, j) + dNext(i-1, j) + dNext(i, j+1) + 
-         * dNext(i, j-1)) - 4 * dNext(i,j)
+         * But, s is unknown in this equation.
+         * s = dNext(i+1, j) + dNext(i-1, j) + dNext(i, j+1) + 
+         * dNext(i, j-1)
          * 
          * In short, we are trying to find dNext using the surrounding 
          * dNext values. This is a system of simultaneous equations and 
@@ -152,7 +154,7 @@ class FluidClass{
          * density) will converge to the diffused densities, i.e we will
          * have solved for dNext
         */
-        void diffuse(attribute atType, float dt);
+        void diffuse(attribute atType);
         /* The third and final term is advection
          * Advection is where the attribute follows the velocity field,
          * denisty and velocity itself
@@ -235,7 +237,7 @@ class FluidClass{
          * This will be the new density after advection
          * dNext
         */   
-        void advection(attribute atType, float dt); 
+        void advection(attribute atType); 
         /* Clearing divergence of the vector field.
          * This is only used on the velocity attribute, so no
          * parameters are passed in.
@@ -263,7 +265,7 @@ class FluidClass{
          *            difference in y veclocities across 2 vertical cells)/
          *            distance between the cells
          *      
-         *          = (vXCurr(i+1,j) - vXCurr(i-1,j) +
+         *          = -(vXCurr(i+1,j) - vXCurr(i-1,j) +
          *            vYCurr(i,j+1) - vYCurr(i,j-1))/2
          * 
          * (2) Compute a field of p values (scalar values)
@@ -299,24 +301,29 @@ class FluidClass{
          * we call every time step
          * 
          * density solver steps:
-         * 1. add source (add density)
-         * 2. diffusion
-         * 3. advection
+         * 1. add source (add density), compute next
+         * 2. curr = next
+         * 3. diffusion, compute next
+         * 4. curr = next
+         * 5. advection, compute next
+         * 6. curr = next
          * 
          * velocity solver steps:
-         * 1. add source (add velocity)
-         * 2. diffuse
-         * 3. clearDivergence
-         * 4. advection
-         * 5. clearDivergence
+         * 1. add source (add velocity), compute next
+         * 2. curr = next
+         * 3. diffusion, compute next
+         * 4. curr = next
+         * 5. clearDivergence, subtract from curr
+         * 6. advection, compute next
+         * 7. curr = next
+         * 8. clearDivergence, subtract from curr
         */           
         void densityStep(void);
         void velocityStep(void);
         /* simulation step combines both
          * of the above steps
          * (1) velocity step
-         * (2) densoty step
-         * (3) render density
+         * (2) density step
         */
         void simulationStep(void);
 };

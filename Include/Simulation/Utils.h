@@ -1,5 +1,5 @@
-#ifndef SIMULATION_FLUID_H
-#define SIMULATION_FLUID_H
+#ifndef SIMULATION_UTILS_H
+#define SIMULATION_UTILS_H
 
 #include "../Simulation/Common.h"
 /* Utility functions that will be used with
@@ -57,7 +57,7 @@ int getIdx(int i, int j);
  * 
  * next = (curr + k(sNext))/(1 + 4k)
 */
-void iterSolve(float *curr, float *next, float k, int numIter);
+void iterSolve(attribute atType, float *curr, float *next, float k, int numIter);
 /* Boundaries in the grid
  * We assume that the fluid is contained in a
  * box with solid walls: no flow should exit the walls. 
@@ -83,5 +83,5 @@ void iterSolve(float *curr, float *next, float k, int numIter);
  *                              0.5 * (2 nearest cells)
 */
 void setBoundaries(attribute atType, float *curr);
-#endif /* SIMULATION_FLUID_H
+#endif /* SIMULATION_UTILS_H
 */

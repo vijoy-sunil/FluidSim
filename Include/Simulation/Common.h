@@ -5,20 +5,24 @@
 */
 typedef enum{
     DENSITY, 
-    VELOCITY
+    VELOCITY_X, 
+    VELOCITY_Y, 
+    OTHER
 }attribute;
 
-/* Other constants that are use in this
- * application
-*/
 /* number of iterations in the iter solver
 */
 const int kIter = 20;
 /* grid size for simulation
+ * N*N
 */
-const int N = 20;
+const int N = 200;
+/* diffusion constant
+*/
+const float dDiff = 0;
+const float vDiff = 0;
 /* time step
 */
-const int dt = 0.1;
+const float dt = 0.1;
 #endif /* SIMULATION_COMMON_H
 */
