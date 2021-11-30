@@ -1,0 +1,55 @@
+/* In the old days, using OpenGL meant developing in 
+ * immediate mode (often referred to as the fixed 
+ * function pipeline) which was an easy-to-use method 
+ * for drawing graphics. Most of the functionality of 
+ * OpenGL was hidden inside the library and developers 
+ * did not have much control over how OpenGL does its 
+ * calculations. Developers eventually got hungry for 
+ * more flexibility and over time the specifications 
+ * became more flexible as a result; developers gained 
+ * more control over their graphics. The immediate mode 
+ * is really easy to use and understand, but it is also 
+ * extremely inefficient. For that reason the specification 
+ * started to deprecate immediate mode functionality from 
+ * version 3.2 onwards and started motivating developers 
+ * to develop in OpenGL's core-profile mode, which is a 
+ * division of OpenGL's specification that removed all 
+ * old deprecated functionality.
+
+ * Each shader begins with a declaration of its version. 
+ * Since OpenGL 3.3 and higher the version numbers of 
+ * GLSL match the version of OpenGL (GLSL version 420 
+ * corresponds to OpenGL version 4.2 for example). We also 
+ * explicitly mention we're using core profile functionality.
+*/
+#version 330 core
+/* Next we declare all the input vertex attributes in the 
+ * vertex shader with the in keyword.
+ *
+ * The vertex shader should receive some form of input 
+ * otherwise it would be pretty ineffective. The vertex 
+ * shader differs from others in its input, in that it 
+ * receives its input straight from the vertex data. To 
+ * define how the vertex data is organized we specify 
+ * the input variables with location metadata so we can 
+ * configure the vertex attributes on the CPU. 
+*/
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aColor;
+/* So if we want to send data from one shader to the 
+ * other we'd have to declare an output in the sending 
+ * shader and a similar input in the receiving shader. 
+ * When the types and the names are equal on both sides 
+ * OpenGL will link those variables together and then 
+ * it is possible to send data between shaders 
+*/
+out vec3 ourColor;
+
+void main(){
+    /* To set the output of the vertex shader we have to 
+     * assign the position data to the predefined gl_Position 
+     * variable which is a vec4 behind the scenes.
+    */
+    gl_Position = vec4(aPos, 1.0);
+    ourColor = aColor;
+}

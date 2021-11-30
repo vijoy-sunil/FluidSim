@@ -1,0 +1,32 @@
+/* The fragment shader is all about calculating 
+ * the color output of your pixels. Colors in 
+ * computer graphics are represented as an array of 
+ * 4 values: the red, green, blue and alpha (opacity) 
+ * component, commonly abbreviated to RGBA. When defining 
+ * a color in OpenGL or GLSL we set the strength of 
+ * each component to a value between 0.0 and 1.0. If, 
+ * for example, we would set red to 1.0 and green to 1.0 
+ * we would get a mixture of both colors and get the 
+ * color yellow. Given those 3 color components we can 
+ * generate over 16 million different colors!
+*/
+#version 330 core
+/* The fragment shader only requires one output variable 
+ * and that is a vector of size 4 that defines the final 
+ * color output that we should calculate ourselves. We can 
+ * declare output values with the out keyword, that we 
+ * here promptly named FragColor.
+*/
+out vec4 FragColor; 
+/* So if we want to send data from one shader to the 
+ * other we'd have to declare an output in the sending 
+ * shader and a similar input in the receiving shader. 
+ * When the types and the names are equal on both sides 
+ * OpenGL will link those variables together and then 
+ * it is possible to send data between shaders 
+*/
+in vec3 ourColor;
+  
+void main(){
+    FragColor = vec4(ourColor, 1.0);
+}
