@@ -3,7 +3,7 @@
 #include <fstream>
 #include <sstream>
 
-ShaderClass::ShaderClass(const char* vertexPath, const char* fragmentPath){
+ShaderClass::ShaderClass(void){
     /* retrieve the vertex/fragment source code from 
      * filePath
     */
@@ -139,6 +139,15 @@ void ShaderClass::use(){
     glUseProgram(ID); 
 }
 
+/* we query for the location of the uniform using 
+ * glGetUniformLocation. We supply the shader program and 
+ * the name of the uniform (that we want to retrieve the 
+ * location from) to the query function. 
+ * 
+ * If glGetUniformLocation returns -1, it could not find the 
+ * location. Lastly we can set the uniform value using the 
+ * glUniform_ function. 
+*/
 void ShaderClass::setBool(const std::string &name, bool value) const{         
     glUniform1i(glGetUniformLocation(ID, name.c_str()), (int)value); 
 }
@@ -149,6 +158,10 @@ void ShaderClass::setInt(const std::string &name, int value) const{
 
 void ShaderClass::setFloat(const std::string &name, float value) const{ 
     glUniform1f(glGetUniformLocation(ID, name.c_str()), value); 
+}
+
+void ShaderClass::setVec4(const std::string &name, float x, float y, float z, float w) const{ 
+    glUniform4f(glGetUniformLocation(ID, name.c_str()), x, y, z, w); 
 }
 
 void ShaderClass::checkCompileErrors(unsigned int shader, std::string type){

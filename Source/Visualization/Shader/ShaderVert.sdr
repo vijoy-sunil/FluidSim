@@ -36,14 +36,14 @@
 */
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aColor;
-/* So if we want to send data from one shader to the 
+/* If we want to send data from one shader to the 
  * other we'd have to declare an output in the sending 
  * shader and a similar input in the receiving shader. 
  * When the types and the names are equal on both sides 
  * OpenGL will link those variables together and then 
  * it is possible to send data between shaders 
 */
-out vec3 ourColor;
+out vec3 cellColor;
 
 void main(){
     /* To set the output of the vertex shader we have to 
@@ -51,5 +51,5 @@ void main(){
      * variable which is a vec4 behind the scenes.
     */
     gl_Position = vec4(aPos, 1.0);
-    ourColor = aColor;
+    cellColor = aColor;
 }

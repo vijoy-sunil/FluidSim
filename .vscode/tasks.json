@@ -10,15 +10,16 @@
 				"-std=c++17",
 				"-stdlib=libc++",
                 
+                "--include-directory=${workspaceFolder}/Include/Control/",
                 "--include-directory=${workspaceFolder}/Include/Simulation/",
 				"--include-directory=${workspaceFolder}/Include/Visualization/",   
 
 				"/opt/homebrew/Cellar/glfw/3.3.5/lib/libglfw.3.dylib",
                 
+                "${workspaceFolder}/Source/Control/*.cpp",
                 "${workspaceFolder}/Source/Simulation/*.cpp",
                 "${workspaceFolder}/Source/Visualization/glad/glad.c",
                 "${workspaceFolder}/Source/Visualization/Shader/*.cpp",	
-                "${workspaceFolder}/Source/main.cpp",
 
 				"-o",
 				"${workspaceFolder}/Build/ProductImage.exe"

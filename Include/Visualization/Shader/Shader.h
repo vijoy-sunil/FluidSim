@@ -59,6 +59,12 @@
 */
 class ShaderClass{
     private:
+        /* shader file paths
+        */
+        const char* vertexPath = 
+        "/Users/vijoys/Desktop/Projects/FluidSim/Source/Visualization/Shader/ShaderVert.sdr";
+        const char* fragmentPath = 
+        "/Users/vijoys/Desktop/Projects/FluidSim/Source/Visualization/Shader/ShaderFrag.sdr";
         /* Check compilation errors after compiling shaders
          * and linking errors after linking a shader program
         */
@@ -70,7 +76,7 @@ class ShaderClass{
         /* Constructor that takes in the file paths for vertex
          * and fragment shaders source code
         */
-        ShaderClass(const char* vertexPath, const char* fragmentPath);
+        ShaderClass();
         /* Activate a shader program object referenced by ID
         */
         void use(void); 
@@ -95,6 +101,7 @@ class ShaderClass{
         void setBool(const std::string &name, bool value) const;
         void setInt(const std::string &name, int value) const;
         void setFloat(const std::string &name, float value) const;
+        void setVec4(const std::string &name, float x, float y, float z, float w) const;
 };
 #endif /* VISUALIZATION_SHADER_H
 */

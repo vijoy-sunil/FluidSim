@@ -1,7 +1,7 @@
 #ifndef SIMULATION_FLUID_H
 #define SIMULATION_FLUID_H
 
-#include "../Simulation/Common.h"
+#include "../../Include/Simulation/Common.h"
 
 /* the 2D fluid class based on Navier-Stokes equations
  * for incompressible fluids

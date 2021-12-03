@@ -1,6 +1,4 @@
 #include "../../Include/Simulation/Utils.h"
-#include <cassert> /* for assert
-*/
 
 void swap(float **p1, float **p2){
     float *temp = *p1;

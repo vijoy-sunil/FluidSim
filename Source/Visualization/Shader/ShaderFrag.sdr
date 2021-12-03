@@ -18,15 +18,24 @@
  * here promptly named FragColor.
 */
 out vec4 FragColor; 
-/* So if we want to send data from one shader to the 
+/* If we want to send data from one shader to the 
  * other we'd have to declare an output in the sending 
  * shader and a similar input in the receiving shader. 
  * When the types and the names are equal on both sides 
  * OpenGL will link those variables together and then 
  * it is possible to send data between shaders 
+ *
+ * Uniforms are another way to pass data from our 
+ * application on the CPU to the shaders on the GPU. They
+ * are like global variables, meaning that a uniform 
+ * variable is unique per shader program object, and can 
+ * be accessed from any shader at any stage in the shader 
+ * program. Second, whatever you set the uniform value to, 
+ * uniforms will keep their values until they're either 
+ * reset or updated.
 */
-in vec3 ourColor;
+in vec3 cellColor;
   
 void main(){
-    FragColor = vec4(ourColor, 1.0);
+    FragColor = vec4(cellColor, 1.0f);
 }

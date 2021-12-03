@@ -1,10 +1,7 @@
 #ifndef SIMULATION_UTILS_H
 #define SIMULATION_UTILS_H
 
-#include "../Simulation/Common.h"
-/* Utility functions that will be used with
- * the fluid class
-*/
+#include "../../Include/Simulation/Common.h"
 
 /* swap pointers, this is mainly used to swap
  * between current and next values for density

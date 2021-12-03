@@ -5,6 +5,10 @@
 
 FluidClass::FluidClass(int _N, float _dDiff, float _vDiff, float _dt){
     N = _N;
+    /* (N+2) has to be an even number, for placement
+     * on the render screen
+    */
+    assert((N+2) % 2 == 0);
     dDiff = _dDiff;
     vDiff = _vDiff;
     dt = _dt;
