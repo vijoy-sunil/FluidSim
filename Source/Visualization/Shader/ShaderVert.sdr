@@ -35,7 +35,7 @@
  * configure the vertex attributes on the CPU. 
 */
 layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aColor;
+layout (location = 1) in vec4 aColor;
 /* If we want to send data from one shader to the 
  * other we'd have to declare an output in the sending 
  * shader and a similar input in the receiving shader. 
@@ -43,7 +43,7 @@ layout (location = 1) in vec3 aColor;
  * OpenGL will link those variables together and then 
  * it is possible to send data between shaders 
 */
-out vec3 cellColor;
+out vec4 cellColor;
 
 void main(){
     /* To set the output of the vertex shader we have to 

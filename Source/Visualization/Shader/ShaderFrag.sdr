@@ -34,8 +34,8 @@ out vec4 FragColor;
  * uniforms will keep their values until they're either 
  * reset or updated.
 */
-in vec3 cellColor;
+in vec4 cellColor;
   
 void main(){
-    FragColor = vec4(cellColor, 1.0f);
+    FragColor = cellColor;
 }
