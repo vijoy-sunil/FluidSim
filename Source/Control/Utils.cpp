@@ -49,7 +49,7 @@ float *color = (float*)malloc(sizeof(float) * sz);
 /* cell colors
 */
 float borderR = 1.0, borderG = 1.0, borderB = 0.0, borderAlpha = 1.0;
-float cellR = 1.0, cellG = 1.0, cellB = 1.0, cellAlpha = 0.0;
+float cellR = 1.0, cellG = 0.0, cellB = 1.0, cellAlpha = 0.0;
 /* With the vertex data defined we'd like to send it as
  * input to the first process of the graphics pipeline: 
  * the vertex shader.
@@ -437,19 +437,18 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         double xPos, yPos;
         /* getting cursor position
         */
-        glfwGetCursorPos(window, &xPos, &xPos);
+        glfwGetCursorPos(window, &xPos, &yPos);
         /* First we remove the scale factor from the position
-         * returned
+         * returned. Next, xPos remains the same (based on the
+         * above figure), but rate of change of yPos has to be
+         * inverted
         */
         xPos = xPos/scale;
-        yPos = yPos/scale;
-#if 0
-        std::cout << "Cursor Position at " << xPos << " : " << xPos << std::endl;
-#endif
+        yPos = (N + 2) - (yPos/scale);
         /* compute grid cell position
         */
-        cellX = N/2;
-        cellY = N/2;
+        cellX = (int)xPos;
+        cellY = (int)yPos;
     }    
 }
 
