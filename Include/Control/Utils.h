@@ -1,5 +1,5 @@
-#ifndef CONTROL_MAINUTILS_H
-#define CONTROL_MAINUTILS_H
+#ifndef CONTROL_UTILS_H
+#define CONTROL_UTILS_H
 /* Be sure to include GLAD before GLFW. The include file 
  * for GLAD includes the required OpenGL headers behind 
  * the scenes (like GL/gl.h) so be sure to include GLAD 
@@ -47,11 +47,12 @@
 #include <GLFW/glfw3.h>
 #include <vector>
 
-/* externs
+/* externs, since these are used in main
 */
-extern float borderR, borderG, borderB;
-extern float cellR, cellG, cellB;
+extern float borderR, borderG, borderB, borderAlpha;
+extern float cellR, cellG, cellB, cellAlpha;
 extern unsigned int VAO;
+extern int cellX, cellY;
 extern std::vector<unsigned int> indices;
 /* enum to decide the type of data to be processed
 */
@@ -60,20 +61,18 @@ typedef enum{
     COLOR
 }dataType;
 
-/* fn declarations
+/* fn declarations since these are used outside
+ * in main
 */
 GLFWwindow* openGLBringUp(void);
 void openGLClose(void);
-void genBufferObjects(void);
 void moveDataToGPU(dataType dtType);
 void setVertexAttribute(dataType dtType);
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 
-void genCellVertices(float i, float j);
 void genCellVerticesWrapper(int i, int j);
-int getEBOIdx(int i, int j);
-void genCellColor(int i, int j, float r, float g, float b);
-#endif /* CONTROL_MAINUTILS_H
+void genCellColor(int i, int j, float r, float g, float b, float alpha);
+float getRandomAmount(float start, float end);
+int getIdx(int i, int j);
+#endif /* CONTROL_UTILS_H
 */

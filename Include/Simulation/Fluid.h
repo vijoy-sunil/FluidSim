@@ -1,7 +1,14 @@
 #ifndef SIMULATION_FLUID_H
 #define SIMULATION_FLUID_H
 
-#include "../../Include/Simulation/Common.h"
+/* Choose attribute to run sim function on
+*/
+typedef enum{
+    DENSITY,
+    VELOCITY_X, 
+    VELOCITY_Y,
+    CLEAR_DIVERGENCE
+}attribute;
 
 /* the 2D fluid class based on Navier-Stokes equations
  * for incompressible fluids
@@ -37,6 +44,72 @@
 class FluidClass{
     private:
         int totalCells;
+        /* Iterative solver using Gauss_Seidel method 
+         * 4x - 2y + z = -2
+         * 3x + 6y - 2z = 49
+         * -x -3y + 5z = -31 
+         * 
+         * Rearrange it to 
+         * x = ... equation #1
+         * y = ... equation #2
+         * z = ... equation #2
+         * 
+         * Start with a random value (say 0) for all
+         * the unknown variables, this will yield some
+         * value for the unknowns. 
+         * For eg: use y = z = 0 and get a value for x
+         * in equation #1, use this value of x in the 
+         * next equation and so on.
+         * Keep doing this or iterate over a set number 
+         * of times, each time using the newest updated values,
+         * the solution will converge to the true solution
+         * for the system of equations.
+         * 
+         * NOTE: This method works only if the matrix made up
+         * of the coefficients are diagonally dominant
+         * 
+         * eg:
+         *  4   -2  1
+         * 3    6   -2
+         * -1   -3  5
+         * 
+         * here, 4 > (-2) + 1, same for the rest, making
+         * it diagonally dominant
+         * In our equations, the denominator > sum of
+         * the coefficients 
+         * x = (-2 + 2y - z)/4
+         * 
+         * We will be solving this equation by iteration over
+         * numIter times
+         * 
+         * curr = (prev + k(sCurr))/(1 + 4k)
+        */
+        void iterSolve(attribute atType, float *curr, float *prev, float k, int numIter);
+        /* Boundaries in the grid
+         * We assume that the fluid is contained in a
+         * box with solid walls: no flow should exit the walls. 
+         * This simply means that the horizontal component of the 
+         * velocity should be zero on the vertical walls, while the 
+         * vertical component of the velocity should be zero on the 
+         * horizontal walls. For the density and other attributes considered
+         * in the code we simply assume continuity.
+         * 
+         * -------------------------
+         * |  * |  v | v  | v  |  * |
+         * --------------------------
+         * |  > |    |    |    |  < |   In case of velocity attribute, 
+         * --------------------------   '<', '>', '^', 'v' will mean a vector
+         * |  > |    |    |    |  < |   opposite to that of the next cell
+         * --------------------------   
+         * |  > |    |    |    |  < |   For density attribute, 
+         * --------------------------   they will mean the same magnitude as the
+         * |  > |    |    |    |  < |   next cell, since we assume continuity
+         * --------------------------   for every attribute except veclocity
+         * |  * |  ^ |  ^ |  ^ |  * |
+         * --------------------------   The corner cells with '*' means
+         *                              0.5 * (2 nearest cells)
+        */
+        void setBoundaries(attribute atType, float *arr);
     public:
         /* Fluid representaion based on a grid with
          * stationary regions (NxN regions), with 
@@ -65,11 +138,10 @@ class FluidClass{
          * Here, we will have diffusion of density and velocity.
         */
         float dDiff, vDiff;
-        /* current densitiy and next density
-         * for all grid cells
+        /* current densitiy and prev density for all grid cells
         */
-        float *dCurr, *dNext;
-        /* current velocity and next velocity
+        float *dCurr, *dPrev;
+        /* current velocity and previous velocity
          * for all grid cells in x and y axis
          *
          * The velocity attribute tells us how
@@ -81,8 +153,8 @@ class FluidClass{
          * depends on the velocity, even the velocity
          * attribute itself (self advection)
         */
-        float *vXCurr, *vXNext;
-        float *vYCurr, *vYNext;
+        float *vXCurr, *vXPrev;
+        float *vYCurr, *vYPrev;
 
         /* constructor takes in N (NxN will be grid size), 
          * time step dt (how big each step is), rates of
@@ -109,14 +181,14 @@ class FluidClass{
          * densities flowing in from the neighbors, which results 
          * in a net difference of
          * 
-         * dCurr(i-1,j)) + dCurr(i+1,j) + dCurr(i,j-1) + dCurr(i,j+1) - 4 * dCurr(i,j)     
-         * Let this be equal to sCurr
+         * d(i-1,j)) + d(i+1,j) + d(i,j-1) + d(i,j+1) - 4 * d(i,j)     
+         * Let this be equal to s
          * 
          * A possible implementation of a diffusion solver then 
          * simply computes these exchanges at every grid cell and 
          * adds them to the existing values.
          * 
-         * dNext(i,j) = dCurr(i,j) + k * (sCurr);
+         * dCurr(i,j) = dPrev(i,j) + k * (sPrev);
          * This is a linear interpolation. But, when k > 1
          * we overshoot the target value. This is 
          * similar to overshooting in control system. If we 
@@ -126,23 +198,23 @@ class FluidClass{
          * (rippling effect)
          * 
          * A better solution than capping k to max value of 1 is
-         * to find the next value which when rewinded back in time
-         * results in the current value
-         * i.e dCurr(i,j) = dNext(i,j) - k * (sNext)
+         * to find the curr value which when rewinded back in time
+         * results in the prev value
+         * i.e dPrev(i,j) = dCurr(i,j) - k * (sCurr)
          * 
          * Rearranging this,
-         * dNext(i,j) = (dCurr(i,j) + k * s)/(1 + 4 * k)
+         * dCurr(i,j) = (dPrev(i,j) + k * sCurr)/(1 + 4 * k)
          * We have turned the linear relation between dNext
          * and k to a hyperbolic one. So instead of overshooting
          * with changes in k, we tend to converge towards the target
          * value. This is a stable way of interpolating.
          * 
-         * But, s is unknown in this equation.
-         * s = dNext(i+1, j) + dNext(i-1, j) + dNext(i, j+1) + 
-         * dNext(i, j-1)
+         * But, sCurr is unknown in this equation.
+         * sCurr = dCurr(i+1, j) + dCurr(i-1, j) + dCurr(i, j+1) + 
+         * dCurr(i, j-1)
          * 
-         * In short, we are trying to find dNext using the surrounding 
-         * dNext values. This is a system of simultaneous equations and 
+         * In short, we are trying to find dCurr using the surrounding 
+         * dCurr values. This is a system of simultaneous equations and 
          * we solve this using Gauss-Seidel method where we approximate
          * the solution using an iterative solver.
          * 
@@ -154,7 +226,7 @@ class FluidClass{
          * density) will converge to the diffused densities, i.e we will
          * have solved for dNext
         */
-        void diffuse(attribute atType);
+        void diffuse(attribute atType, float *curr, float *prev, float diff);
         /* The third and final term is advection
          * Advection is where the attribute follows the velocity field,
          * denisty and velocity itself
@@ -184,7 +256,7 @@ class FluidClass{
          * 
          * An easier way to distribute the density proportionately 
          * to all 4 cells would be to look at a grid cell, and trace
-         * backwards to find where its next density will come from
+         * backwards to find where its curr density will come from
          * using its current veclocity vector. 
          * 
          * This way we will only need one calculation per cell.
@@ -237,7 +309,7 @@ class FluidClass{
          * This will be the new density after advection
          * dNext
         */   
-        void advection(attribute atType); 
+        void advection(attribute atType, float *curr, float *prev, float *vX, float *vY); 
         /* Clearing divergence of the vector field.
          * This is only used on the velocity attribute, so no
          * parameters are passed in.
@@ -295,28 +367,9 @@ class FluidClass{
          * vXCurr = vXCurr - (p(i+1,j) - p(i-1,j))/2
          * vYCurr = vYCurr - (p(i,j+1) - p(i,j-1))/2 
         */
-        void clearDivergence(void);
-        /* This is the density solver and the
-         * velocity solver function that
-         * we call every time step
-         * 
-         * density solver steps:
-         * 1. add source (add density), compute next
-         * 2. curr = next
-         * 3. diffusion, compute next
-         * 4. curr = next
-         * 5. advection, compute next
-         * 6. curr = next
-         * 
-         * velocity solver steps:
-         * 1. add source (add velocity), compute next
-         * 2. curr = next
-         * 3. diffusion, compute next
-         * 4. curr = next
-         * 5. clearDivergence, subtract from curr
-         * 6. advection, compute next
-         * 7. curr = next
-         * 8. clearDivergence, subtract from curr
+        void clearDivergence(float *vX, float *vY, float *div, float *p);
+        /* This is the density solver and the velocity solver 
+         * function that we call every time step
         */           
         void densityStep(void);
         void velocityStep(void);

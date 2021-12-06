@@ -1,6 +1,7 @@
-#include "../../Include/Control/mainUtils.h"
-#include "../../Include/Visualization/Shader/Shader.h"
+#include "../../Include/Control/Constants.h"
 #include "../../Include/Simulation/Fluid.h"
+#include "../../Include/Control/Utils.h"
+#include "../../Include/Visualization/Shader/Shader.h"
 
 int main(void){
     /* create fluid object
@@ -20,10 +21,6 @@ int main(void){
      * NOTE: there are a total of (N+2)*(N+2) cells
      * eventhough the fluid class see N*N cells
     */
-#if 0
-    genCellVertices(0.0, 0.0);
-    genCellColor(borderR, borderG, borderB);
-#else
     for(int i = 0; i < (N+2); i++){
         for(int j = 0; j < (N+2); j++){
             genCellVerticesWrapper(i, j);
@@ -31,12 +28,12 @@ int main(void){
             */
             if((i == 0) || (i == (N + 2) - 1) ||
                (j == 0) || (j == (N + 2) - 1))
-                genCellColor(i, j, borderR, borderG, borderB);
+                genCellColor(i, j, borderR, borderG, borderB, borderAlpha);
             else    
-                genCellColor(i, j, cellR, cellG, cellB);
+                genCellColor(i, j, cellR, cellG, cellB, cellAlpha);
         }
     }
-#endif
+
     moveDataToGPU(VERTEX);
     moveDataToGPU(COLOR);
 
@@ -58,6 +55,14 @@ int main(void){
     */
     setVertexAttribute(VERTEX);
     setVertexAttribute(COLOR);
+
+    /* We need this to enable alpha transperancy of our cells.
+     * The glBlendFunc(GLenum sfactor, GLenum dfactor) function 
+     * expects two parameters that set the option for the source 
+     * and destination factor. 
+    */
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     /* We don't want the application to draw a single image 
      * and then immediately quit and close the window. We 
@@ -108,22 +113,47 @@ int main(void){
          * and glClear is a state-using function in that it uses 
          * the current state to retrieve the clearing color from.
         */
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(0.0, 0.0, 0.0, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         /* Use the shader object that we linked using our shader 
          * files
         */
         Shader.use();
-        /* Within the render loop at every time step, modify the 
-         * color array for any cell. We don't need to change vertices
-         * since they have already been set
+        /* add source at cell selected by mouse click, at start we
+         * add source at the middle by default.
+         *
+         * NOTE: the amount of density added is set to be randomly
+         * chosen between 0.0 and 1.0 so that it is easier to set
+         * the alpha term while rendering
         */
-        genCellColor(0, 0, 1.0, 0.0, 1.0);
+        for(int i = -1; i <= 1; i++){
+            for(int j = -1; j <= 1; j++){
+                Fluid.addDensitySource(cellX + i, cellY + j, getRandomAmount(0.0, 1.0));   
+            }
+        }
+        Fluid.addVelocitySource(cellX, cellY, getRandomAmount(-1.0, 1.0), 
+                                              getRandomAmount(-1.0, 1.0));
+        /* simulate for one tine step, to see the effects after
+         * adding source
+        */
+        Fluid.simulationStep();
+        /* To see the fluid flow, we need to plot the density (dye)
+         * value at every grid cell (except the border cells). move
+         * the attribute array to color array
+        */
+        for(int i = 0; i < N; i++){
+            for(int j = 0; j < N; j++){
+                /* cellAlpha has to be in the range 0.0 to 1.0
+                */
+                cellAlpha = Fluid.dPrev[(i + (j * N))];
+                genCellColor(i + 1, j + 1, cellR, cellG, cellB, cellAlpha);
+            }
+        }
+
         /* move color array to GPU
         */
         moveDataToGPU(COLOR);
-
         /* Do we want the data rendered as a collection of points, 
          * a collection of triangles or perhaps just one long line? 
          * Those hints are called primitives and are given to OpenGL 

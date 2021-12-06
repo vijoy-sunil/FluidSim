@@ -1,5 +1,6 @@
-#include "../../Include/Control/mainUtils.h"
-#include "../../Include/Simulation/Common.h"
+#include "../../Include/Control/Utils.h"
+#include "../../Include/Control/Constants.h"
+#include <random>
 #include <stdlib.h> /* for malloc, calloc, free
 */
 #include <iostream>
@@ -13,23 +14,10 @@
 */
 const float yMin = -1.0, yMax = 1.0;
 const float xMin = -1.0, xMax = 1.0; 
-/* scale render window size, changing this factor resizes 
- * everything inside the window and no special calculation
- * is necessary
-*/
-const float scale = 10;
 /* grid cell dimension, depends on number of grids we
  * are simulating with the fluid
 */
 const float cellSize = (xMax - xMin)/(N + 2);
-/* Total screen space, we do N+2 because we will
- * be drawing border cells as well
-*/
-const unsigned int screenWidth = (N + 2) * scale;
-const unsigned int screenHeight = (N + 2) * scale;
-/* main render window title
-*/
-const char* windowTitle = "FLUID SIM";
 /* As input to the graphics pipeline we pass in a list
  * of 3D coordinates that should form the desired shape
  * in an array here called VERTEX DATA; this vertex data 
@@ -47,21 +35,21 @@ std::vector<float> vertices;
  * 4 vertices using EBO
 */
 std::vector<unsigned int> indices;
-/* RGB format, define the color for all the border cells.
+/* RGBA format, define the color for all the border cells.
  * We are not using vector here since we need to index
  * into a specific cell to set the colors. It is easier
  * to do this with arrays
  * 
  * Total #of elements in color array = 
- * 3 (RGB) * 4(vertices per cell) * 
+ * 4 (RGBA) * 4(vertices per cell) * 
  * (N + 2) * (N + 2) (cells)
 */
-const int sz = 12 * (N + 2) * (N + 2);
+const int sz = 16 * (N + 2) * (N + 2);
 float *color = (float*)malloc(sizeof(float) * sz);
 /* cell colors
 */
-float borderR = 1.0, borderG = 1.0, borderB = 0.0;
-float cellR = 0.0, cellG = 0.0, cellB = 0.0;
+float borderR = 1.0, borderG = 1.0, borderB = 0.0, borderAlpha = 1.0;
+float cellR = 1.0, cellG = 1.0, cellB = 1.0, cellAlpha = 0.0;
 /* With the vertex data defined we'd like to send it as
  * input to the first process of the graphics pipeline: 
  * the vertex shader.
@@ -96,12 +84,31 @@ float cellR = 0.0, cellG = 0.0, cellB = 0.0;
  * other for color
 */
 unsigned int VBO, VBOColor, VAO, EBO;
-/* this us used in generating indices and also to insert
- * color to vertex identified by its eboIdx
+/* this is used in generating indices and also to insert
+ * color to vertex/cell identified by its eboIdx
 */
 int eboIdx = 0;
+/* grid cell position at mouse click, default set to the
+ * middle cell
+*/
+int cellX = N/2, cellY = N/2;
+
+/* function declarations
+*/
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
+void genBufferObjects(void);
+void genCellVertices(float i, float j);
+int getEBOIdx(int i, int j);
 
 GLFWwindow* openGLBringUp(void){
+    /* Total screen space, we do N+2 because we will
+     * be drawing border cells as well
+    */
+    const unsigned int screenWidth = (N + 2) * scale;
+    const unsigned int screenHeight = (N + 2) * scale;
+    /* main render window title
+    */
+    const char* windowTitle = "FLUID SIM";
     /* This fn initializes the GLFW library. This has to 
      * be done before most GLFW fns can be used
     */
@@ -130,8 +137,8 @@ GLFWwindow* openGLBringUp(void){
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     /* Note that on Mac OS X you need to add 
-    * glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); 
-    * to your initialization code for it to work.
+     * glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); 
+     * to your initialization code for it to work.
     */
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -160,9 +167,9 @@ GLFWwindow* openGLBringUp(void){
     */
     glfwMakeContextCurrent(window);
     /* We have to tell GLFW we want to call this function 
-    * on every window resize by registering it
+     * on every mouse click
     */
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
 
     /* GLAD manages function pointers for OpenGL so we want 
      * to initialize GLAD before we call any OpenGL function.
@@ -317,7 +324,7 @@ void moveDataToGPU(dataType dtType){
         */
         glBindVertexArray(VAO);
         glBindBuffer(GL_ARRAY_BUFFER, VBOColor);
-        glBufferData(GL_ARRAY_BUFFER, sz * sizeof(float), color, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sz * sizeof(float), color, GL_DYNAMIC_DRAW);
         glBindVertexArray(0);
     }
 }
@@ -373,7 +380,7 @@ void setVertexAttribute(dataType dtType){
     else if(dtType == COLOR){
         glBindVertexArray(VAO);
         glBindBuffer(GL_ARRAY_BUFFER, VBOColor);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * (sizeof(float)), (void*)0);
+        glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 4 * (sizeof(float)), (void*)0);
         glEnableVertexAttribArray(1);                  
         glBindVertexArray(0); 
     }
@@ -412,38 +419,38 @@ void processInput(GLFWwindow* window){
         glfwSetWindowShouldClose(window, true);
 }
 
-/* whenever the window size changed (by OS or user resize) 
- * this callback function executes. The framebuffer size 
- * function takes a GLFWwindow as its first argument and 
- * two integers indicating the new window dimensions. 
- * Whenever the window changes in size, GLFW calls this 
- * function and fills in the proper arguments for you to 
- * process.
+/* call back function upon mouse click. if this is the
+ * screen space:
+ * ------------------------------------- X axis
+ * |(0,0)                           ((N+2)*scale,0)              
+ * |                                    |
+ * |                                    |
+ * |                                    |
+ * |(0, (N+2)*scale)                ((N+2)*scale, (N+2)*scale)
+ * Y axis
+ * 
+ * What we need is to convert xPos and yPos to grid cell
+ * coordinates, and set them to cellX, cellY
 */
-void framebuffer_size_callback(GLFWwindow* window, int width, int height){
-    /* We have to tell OpenGL the size of the rendering 
-     * window so OpenGL knows how we want to display the 
-     * data and coordinates with respect to the window. 
-     * We can set those dimensions via the glViewport 
-     * function
-     * 
-     * The first two parameters of glViewport set the 
-     * location of the lower left corner of the window. 
-     * The third and fourth parameter set the width and 
-     * height of the rendering window in pixels, which we 
-     * set equal to GLFW's window size.
-     * 
-     * We could actually set the viewport dimensions at 
-     * values smaller than GLFW's dimensions; then all 
-     * the OpenGL rendering would be displayed in a smaller 
-     * window and we could for example display other 
-     * elements outside the OpenGL viewport.
-     * 
-     * Note that processed coordinates in OpenGL are between
-     * -1 and 1 so we effectively map from the range (-1 to 
-     * 1) to (0, 800) and (0, 600).
-    */
-    glViewport(0, 0, width, height);
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods){
+    if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+        double xPos, yPos;
+        /* getting cursor position
+        */
+        glfwGetCursorPos(window, &xPos, &xPos);
+        /* First we remove the scale factor from the position
+         * returned
+        */
+        xPos = xPos/scale;
+        yPos = yPos/scale;
+#if 0
+        std::cout << "Cursor Position at " << xPos << " : " << xPos << std::endl;
+#endif
+        /* compute grid cell position
+        */
+        cellX = N/2;
+        cellY = N/2;
+    }    
 }
 
 /* (i,j) will be the top left coordinates of a grid cell
@@ -538,14 +545,9 @@ void genCellVerticesWrapper(int i, int j){
     float rowIdx = (idx / (N + 2)) * cellSize;
     float colIdx = (idx % (N + 2)) * cellSize;
 
-    float x = colIdx - ((N + 2)/2) * cellSize;
-    float y = rowIdx - ((N + 2)/2) * cellSize;
+    float x = rowIdx - ((N + 2)/2) * cellSize;
+    float y = colIdx - ((N + 2)/2) * cellSize;
     
-#if 0
-    std::cout<<rowIdx<<" "<<colIdx<<std::endl;
-    std::cout<<x<<" "<<y<<std::endl;
-#endif
-
     y = y + cellSize;
     genCellVertices(x, y);
 }
@@ -566,36 +568,54 @@ int getEBOIdx(int i, int j){
  * all 4 vertices. This fn will be called after generating 
  * all 4 vertices of a cell
  *
- *         v0       v1      v2      v3
- *         x,y,z    x,y,z   x,y,z   x,y,z
- *         r,g,b    r,g,b   r,g,b   r,g,b
- *                                          ^
- *                                          |
- *                                         eboIdx = 4
+ *         v0       v1       v2       v3
+ *         x,y,z    x,y,z    x,y,z    x,y,z
+ *         r,g,b,a  r,g,b,a  r,g,b,a  r,g,b,a
+ *                                           ^
+ *                                           |
+ *                                           eboIdx = 4
 */
-void genCellColor(int i, int j, float r, float g, float b){
-    int n = getEBOIdx(i, j) * 3;
-    int cellColorBatchSize = 12; /* 4 vertices, 3 axis
+void genCellColor(int i, int j, float r, float g, float b, float alpha){
+    int n = getEBOIdx(i, j) * 4;
+    int cellColorBatchSize = 16; /* 4 vertices, 4 color values
     */
     int k = n - cellColorBatchSize;
-    /* v0 top left
+    /* set color for all 4 vertices  from top left,
+     * bottom left, bottom right and top right
     */
-    color[k++] = r;
-    color[k++] = g;
-    color[k++] = b;
-    /* v1 bottom left
+    for(int i = 0; i < 4; i++){
+        color[k++] = r;
+        color[k++] = g;
+        color[k++] = b;
+        color[k++] = alpha;       
+    }
+}
+
+/* given a start and an end range, generate a random number.
+ * A use case for this function is to add sources upon mouse
+ * click
+*/
+float getRandomAmount(float start, float end){
+    /* At first, the std::random_device object should be 
+     * initialized. It produces non-deterministic random bits 
+     * for random engine seeding, which is crucial to avoid 
+     * producing the same number sequences. Here we use std::
+     * default_random_engine to generate pseudo-random values, 
+     * but you can declare specific algorithm engine. Next, we
+     *  initialize a uniform distribution and pass min/max values
+     *  as optional arguments.
     */
-    color[k++] = r;
-    color[k++] = g;
-    color[k++] = b;
-    /* v2 bottom right
-    */
-    color[k++] = r;
-    color[k++] = g;
-    color[k++] = b;
-    /* v3 top right
-    */
-    color[k++] = r;
-    color[k++] = g;
-    color[k++] = b;
+    std::random_device rd;
+    std::default_random_engine eng(rd());
+    std::uniform_real_distribution<> distr(start, end);
+    return distr(eng);
+}
+
+/* get grid position given the index
+ * positions (i, j)
+ * Usage: if i = 9, j = 9 in a 10x10 grid,
+ * index will be 9 + (9 * 10) = 99
+*/
+int getIdx(int i, int j){
+    return i + (j * N);
 }
